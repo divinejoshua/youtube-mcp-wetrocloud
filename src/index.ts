@@ -13,7 +13,6 @@ export class MyMCP extends McpAgent {
 		version: "1.0.0",
 	});
 
-
 	static apiKey: string | null = null;
 
 	static setApiKey(apiKey: string | null) {
