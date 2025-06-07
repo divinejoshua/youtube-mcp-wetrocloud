@@ -73,7 +73,7 @@ export class MyMCP extends McpAgent {
 export default {
 	fetch(request: Request, env: Env, ctx: ExecutionContext) {
 		const url = new URL(request.url);
-		const apiKey = url.searchParams.get("apiKey");
+		const apiKey = url.searchParams.get("apiKey") || "";
 		MyMCP.setApiKey(apiKey);
 
 		if (url.pathname === "/sse" || url.pathname === "/sse/message") {
