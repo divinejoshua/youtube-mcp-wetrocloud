@@ -28,7 +28,7 @@ export class MyMCP extends McpAgent {
 	async init() {
 		// Tool to convert a youtube url to markdown
 		this.server.tool(
-			"YoutubeAnalyser",
+			"Wetrocloud_Youtube_Analyzer",
 			{
 				question: z.string(),
 				youtubeUrl: z.string().url(),
