@@ -1,6 +1,8 @@
 import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { randomBytes } from "crypto";
+import Wetrocloud from "wetro-sdk";
 require('dotenv').config()
 
 // Define our MCP agent with tools
@@ -11,57 +13,58 @@ export class MyMCP extends McpAgent {
 		version: "1.0.0",
 	});
 
+
 	static apiKey: string | null = null;
 
 	static setApiKey(apiKey: string | null) {
 		MyMCP.apiKey = apiKey;
 	}
 	
+	wetrocloudClient = new Wetrocloud({
+		apiKey: MyMCP.apiKey || ""
+	  });
 
 
 	async init() {
-		
-		// Tool to convert a website to markdown
+		// Tool to convert a youtube url to markdown
 		this.server.tool(
-			"WebsiteToMarkdown",
+			"YoutubeAnalyser",
 			{
-				link: z.string().url(),
-				resourceType: z.enum(["web", "pdf"]),
+				question: z.string(),
+				youtubeUrl: z.string().url(),
 			},
-			async ({ link, resourceType }) => {
-				const res = await fetch("https://api.wetrocloud.com/v2/markdown-converter/", {
-					method: "POST",
-					headers: {
-						Authorization: `Token ${MyMCP.apiKey}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						link,
-						resource_type: resourceType || "web",
-					}),
-				});
+			async ({ question, youtubeUrl }) => {
 
-				if (!res.ok) {
-					return {
-						content: [
-							{
-								type: "text",
-								text: "Failed to convert to markdown",
-							},
-						],
-					};
-				}
+				// Create collection
+				let collectionId : string = randomBytes(16).toString("hex");
 
-				const markdown :any = await res.json();
-				console.log(markdown.response)
+				// Create a collection (id is optional)
+				await this.wetrocloudClient.createCollection({
+					collection_id: collectionId
+				  });
+
+				// Insert a youtube resource
+				await this.wetrocloudClient.insertResource({
+					collection_id: collectionId,
+					resource: youtubeUrl,
+					type: "youtube"
+					});
+
+				// Query the collection
+				const response : any = await this.wetrocloudClient.queryCollection({
+					collection_id: collectionId,
+					request_query: question
+				  });
+
+				// Return the response
 				return {
 					content: [
-					  {
-						type: "text",
-						text: markdown.response, // Just return the markdown as text
-					  },
+						{
+							type: "text",
+							text: response.response,
+						}
 					],
-				  };
+				};
 			}
 		);
 

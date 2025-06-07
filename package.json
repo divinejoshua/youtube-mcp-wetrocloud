@@ -15,6 +15,7 @@
 		"@modelcontextprotocol/sdk": "^1.12.1",
 		"agents": "^0.0.94",
 		"dotenv": "^16.5.0",
+		"wetro-sdk": "^2.0.0",
 		"zod": "^3.25.51"
 	},
 	"devDependencies": {
