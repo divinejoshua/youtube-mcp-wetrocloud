@@ -1,66 +1,78 @@
 import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+require('dotenv').config()
 
 // Define our MCP agent with tools
 export class MyMCP extends McpAgent {
+
 	server = new McpServer({
-		name: "Authless Calculator",
+		name: "Wetrocloud MCP",
 		version: "1.0.0",
 	});
 
-	async init() {
-		// Simple addition tool
-		this.server.tool(
-			"add",
-			{ a: z.number(), b: z.number() },
-			async ({ a, b }) => ({
-				content: [{ type: "text", text: String(a + b) }],
-			})
-		);
+	static apiKey: string | null = null;
 
-		// Calculator tool with multiple operations
+	static setApiKey(apiKey: string | null) {
+		MyMCP.apiKey = apiKey;
+	}
+	
+
+
+	async init() {
+		
+		// Tool to convert a website to markdown
 		this.server.tool(
-			"calculate",
+			"WebsiteToMarkdown",
 			{
-				operation: z.enum(["add", "subtract", "multiply", "divide"]),
-				a: z.number(),
-				b: z.number(),
+				link: z.string().url(),
+				resourceType: z.enum(["web", "pdf"]),
 			},
-			async ({ operation, a, b }) => {
-				let result: number;
-				switch (operation) {
-					case "add":
-						result = a + b;
-						break;
-					case "subtract":
-						result = a - b;
-						break;
-					case "multiply":
-						result = a * b;
-						break;
-					case "divide":
-						if (b === 0)
-							return {
-								content: [
-									{
-										type: "text",
-										text: "Error: Cannot divide by zero",
-									},
-								],
-							};
-						result = a / b;
-						break;
+			async ({ link, resourceType }) => {
+				const res = await fetch("https://api.wetrocloud.com/v2/markdown-converter/", {
+					method: "POST",
+					headers: {
+						Authorization: `Token ${MyMCP.apiKey}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						link,
+						resource_type: resourceType || "web",
+					}),
+				});
+
+				if (!res.ok) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: "Failed to convert to markdown",
+							},
+						],
+					};
 				}
-				return { content: [{ type: "text", text: String(result) }] };
+
+				const markdown :any = await res.json();
+				console.log(markdown.response)
+				return {
+					content: [
+					  {
+						type: "text",
+						text: markdown.response, // Just return the markdown as text
+					  },
+					],
+				  };
 			}
 		);
+
 	}
 }
 
 export default {
 	fetch(request: Request, env: Env, ctx: ExecutionContext) {
 		const url = new URL(request.url);
+		const apiKey = url.searchParams.get("apiKey");
+		MyMCP.setApiKey(apiKey);
 
 		if (url.pathname === "/sse" || url.pathname === "/sse/message") {
 			return MyMCP.serveSSE("/sse").fetch(request, env, ctx);
